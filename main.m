@@ -1,5 +1,13 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Title: 
+% Desc: 
+% Author: Jc Chen
+% Modified: 2023/03/29
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 close all; clc; clear;
-addpath EchoGenerate/ RDA/;
+addpath EchoGenerate/ RDA/ AnalyseTool/;
 
 % 场景参数设置
 c = 3e8;
@@ -33,12 +41,18 @@ PRF = os_a * f_dop;
 fs = os_r * B;
 
 
-% ************* 回波生成 **************** %
-%tg_pos = [250+rng_start 0; 280+rng_start 0; 250+rng_start 50];
-tg_pos = [260+rng_start 0];
+% ****************** 回波生成 **************** %
+
+%tg_pos = [260+rng_start 0; 261+rng_start 1];
+tg_pos = [260+rng_start 0];           % 设置点目标xy位置
 data = getSimulateEcho(azm_len, rng_len, rng_start, f0, fs, PRF, V, Kr, Tp, theta_rc, theta_bw, tg_pos);
 
+% ****************** 算法成像 **************** %
+img = RDA(data, Kr, f0, Tp, fs, PRF, V, rng_start, theta_rc=theta_rc, theta_bw=theta_bw);
 
-RDA(data, fs, PRF, Kr, f0, Tp, theta_rc, theta_bw, V, rng_start);
+% ****************** 结果 **************** %
+imagesc(abs(img));
+axis xy
+inspectView(img, 20, [64 40]);
 
 

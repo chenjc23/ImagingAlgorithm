@@ -10,16 +10,19 @@ function inspectView(sig, upsample_times, win_len)
 arguments
   sig (:,:)
   upsample_times (:,:)
-  win_len (:,:) = [64, 64]
+  win_len (:,:) = 64
 end
 
   [row, col] = size(sig);
   sig_abs = abs(sig);
   [~, loc_max] = max(sig_abs(:));
-  loc_r = ceil(loc_max / row);
-  loc_c = mod(loc_max, row);
+  loc_r = mod(loc_max, row);
+  loc_c = ceil(loc_max / row);
   
   % 对信号进行窗截取
+  if (length(win_len) == 1)
+    win_len = [win_len win_len];
+  end
   row_start = loc_r - win_len(1)/2 + 1;
   row_end   = loc_r + win_len(1)/2;
   col_start = loc_c - win_len(2)/2 + 1;
@@ -37,6 +40,7 @@ end
     col_end = col;
   end
   sig_win = sig(row_start:row_end, col_start:col_end);
+
   
   % 信号升采样
   sig_expand = upSample(sig_win, upsample_times);
@@ -57,6 +61,6 @@ end
     figure;
     image(255*sig_expand/max(sig_expand(:)));
     colormap("gray");
-    title("灰度图");
+    title("灰度图"); axis xy
   end
 end

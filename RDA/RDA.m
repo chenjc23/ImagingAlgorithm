@@ -1,68 +1,84 @@
-function RDA(data, fs, PRF, Kr, f0, Tp, theta_rc, theta_bw, V, rng_start)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Title: 
+% Desc: 
+% Author: Jc Chen
+% Modified: 2023/03/29
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function img = RDA(data, Kr, f0, Tp, fs, PRF, V, rng_start, options)
+arguments
+  data (:,:)
+  Kr double
+  f0 double
+  Tp double
+  fs double
+  PRF double
+  V double
+  rng_start double
+  options.fnc double = nan
+  options.theta_rc double = nan
+  options.theta_bw double = nan
+  options.type {mustBeMember(options.type, ["point", "scence"])} = "point"
+end
+% 配置参数，输入参数必须要有theta_rc或fnc其一
+fnc = options.fnc;
+theta_rc = options.theta_rc;
+theta_bw = options.theta_bw;
+if (isnan(fnc) && isnan(theta_rc))
+  error('输入参数必须要有theta_rc或fnc其一');
+end
+
 c = 3e8;
 [na, nr] = size(data);
 rng_len = 1/fs*c/2 * (nr-1);
-
-
-
 lamda = c / f0;
-fnc = 2*V*sin(theta_rc)/lamda;
+if (~isnan(theta_rc))
+  fnc = 2*V*sin(theta_rc)/lamda;
+end
 
+% ************** 二维频域进行一次二次合并距离压缩 ************** %
 
-Ls = theta_bw * (rng_start+rng_len) / cos(theta_rc);        % 合成孔径长度
-Ta = Ls / V / cos(theta_rc);                                % 合成孔径时间
-
-
-tr = rng_start*2/c : 1/fs : (rng_start+rng_len)*2/c + 1.2*Tp;        % 距离向时间序列
-
-Na = fix(Ta*PRF) + na;
+% 方位向按一个合成孔径时间补零，距离向按一个脉冲长度补零
+if (~isnan(theta_bw))
+  Ls = theta_bw * (rng_start+rng_len) / cos(theta_rc);        % 合成孔径长度
+  Ta = Ls / V / cos(theta_rc);                                % 合成孔径时间
+  Na = fix(Ta*PRF) + na;
+else
+  Na = 2 * na;
+end
+tr = rng_start*2/c : 1/fs : (rng_start+rng_len)*2/c + 1.2*Tp;
 Nr = length(tr);
-
-
-%sra = zeros(Na, Nr);
+% Nr = fix(1.2*Tp*fs) + nr;
 
 Saf = fft(data, Nr, 2);                   % 距离频域
 Sdf = fft(Saf, Na, 1);                    % 二维频域
 
-
-                  
+% 构建频率轴                  
 fr = fs/Nr * ((0:Nr-1)-fix(Nr/2));            % 距离向频率序列
 fr = circshift(fr, -fix(Nr/2));            % 零频移到两端
-
 fa = PRF/Na * ((0:Na-1)-fix(Na/2)).';         
-fa = circshift(fa, -fix(Na/2)) + fnc;      % 按多普勒中心进行循环移位构建多普勒序列
+fa = circshift(fa, -fix(Na/2));      
+fa = circshift(fa, fix(fnc*Na/PRF)) + fnc;     % 按多普勒中心进行循环移位构建多普勒序列
 
-
-
+% 距离压缩
 R_ref = rng_start + rng_len/2;                 % 测绘带中心参考距离
 D = sqrt(1-lamda^2*fa.^2/4/V^2);               % 徙动因子
-Ksrc = 2*V^2*f0^3*D.^3 ./ (c*R_ref*fa.^2);      % 二次调频率
+Ksrc = 2*V^2*f0^3*D.^3 ./ (c*R_ref*fa.^2);     % 二次调频率
 Hr = exp(1j*pi*(1/Kr-1./Ksrc) * fr.^2);        % 一次二次距离压缩滤波器
 Srd = ifft(Sdf .* Hr, [], 2);                  % 距离压缩后变换到rd域
 
-Srd = Srd(:,1:nr);                             % 距离向舍弃弃置区
-Nr = nr;
-tr = tr(1:nr);
+% 若为点目标成像则舍去弃置区
+if (options.type == "point")
+  Srd = Srd(:,1:nr);  
+  tr = tr(1:nr);
+  Nr = nr;
+end
 
-shiyu = ifft(Srd, [], 1);
-temp = abs(shiyu(fix(na/2), :));
-temp = 20*log10(temp/max(temp));
+% ************************ RCMC ********************* %
 
-figure
-plot(temp)
-
-
-
-
-figure
-contour(abs(ifft(Srd, [], 1)));
-figure
-imagesc(abs(Srd))
-
-% *********** RCMC ************ %
-Rn = c/2 * tr;            % 距离序列
-del_R = lamda^2* (fa.^2) * Rn/8/V^2;      % RCM
-del_R = (1-D)./D * Rn;
+Rn = c/2 * tr;            % 距离序列    
+del_R = (1-D)./D * Rn;       % RCM
 core_len = 8;
 Srd_RCMC = zeros(Na, Nr);
 for i = 1:Na
@@ -79,45 +95,17 @@ for i = 1:Na
     Srd_RCMC(i,j) = sum(sinc_core .* Srd(i, sig_ps)); % 加权求和
   end
 end
-
 figure
 imagesc(abs(Srd_RCMC))
 
-%Srd_RCMC = Srd;
-
-% *********** 方位压缩 ****************** %
-Ha = exp(1j*4*pi/lamda * D * Rn);      % 方位压缩滤波器
+% ****************** 方位压缩 ****************** %
+Ha = exp(1j*4*pi/lamda * (D * Rn - repmat(Rn, Na,1)));      % 方位压缩滤波器
 Srd2 = Srd_RCMC .* Ha;
-Sac = ifft(Srd2, [], 1);                 % 逆变换得二维压缩图像域结果
-Sac = Sac(1:na, :);
+img = ifft(Srd2, [], 1);                 % 逆变换得二维压缩图像域结果
 
-figure
-imagesc(abs(Sac));
-
-figure
-contour(abs(Sac))
-
-
-temp = abs(Sac(fix(na/2), :));
-temp = 20*log10(temp/max(temp));
-
-figure
-plot(temp)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+% 若为点目标成像，方位向舍弃弃置区得到最终结果
+if (options.type == "point")
+  img = img(1:na, :);
+end
 
 end

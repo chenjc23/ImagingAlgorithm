@@ -18,6 +18,8 @@ function output =  upSample(sig, mul_times)
     if (row == 1) 
       output = output.'; 
     end
+
+    plot(abs(output))
   
   % 二维信号
   else 
