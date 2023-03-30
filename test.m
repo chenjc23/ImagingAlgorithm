@@ -26,11 +26,11 @@ fs = Fr;
 rng_start = R0 - 1/fs*c/2 * fix(Nr/2);
 
 % ****************** 算法成像 **************** %
-img = RDA(data, Kr, f0, Tp, fs, PRF, V, rng_start, fnc=fnc, type="scence");
+img = RDA(data, Kr, f0, fs, PRF, V, fnc, rng_start, Tp=Tp, type="scence");
 
 % ****************** 结果 **************** %
 s_enhance = 20*log10(abs(img)/max(max(abs(img)))+eps);
-imagesc(s_enhance, [-65, 0]);
+imagesc(s_enhance, [-55, 0]);
 colormap("gray");
 axis xy
 

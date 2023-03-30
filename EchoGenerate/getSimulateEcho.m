@@ -7,8 +7,8 @@ Na_vec = linspace(-(Na-1)/2, (Na-1)/2, Na);
 
 sra = zeros(Na, Nr);              % 存储回波信号
 for n = 1:Na
-  % 雷达坐标，默认雷达距离向坐标为0
-  radar_x = 0; 
+  % 雷达坐标，默认以场景起始位置作为参照
+  radar_x = -rng_start; 
   radar_y = V/PRF * Na_vec(n);
   % 对每条距离线遍历所有的目标
   for i = 1:size(tg_pos, 1)

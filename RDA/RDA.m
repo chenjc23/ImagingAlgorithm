@@ -6,50 +6,43 @@
 % Modified: 2023/03/29
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function img = RDA(data, Kr, f0, Tp, fs, PRF, V, rng_start, options)
+function img = RDA(data, Kr, f0, fs, PRF, V, fnc, rng_start, options)
 arguments
   data (:,:)
   Kr double
   f0 double
-  Tp double
   fs double
   PRF double
   V double
+  fnc double
   rng_start double
-  options.fnc double = nan
-  options.theta_rc double = nan
-  options.theta_bw double = nan
+  options.Tp = nan
+  options.theta_bw = nan
   options.type {mustBeMember(options.type, ["point", "scence"])} = "point"
 end
-% 配置参数，输入参数必须要有theta_rc或fnc其一
-fnc = options.fnc;
-theta_rc = options.theta_rc;
+Tp = options.Tp;
 theta_bw = options.theta_bw;
-if (isnan(fnc) && isnan(theta_rc))
-  error('输入参数必须要有theta_rc或fnc其一');
-end
 
 c = 3e8;
 [na, nr] = size(data);
 rng_len = 1/fs*c/2 * (nr-1);
 lamda = c / f0;
-if (~isnan(theta_rc))
-  fnc = 2*V*sin(theta_rc)/lamda;
-end
-
 % ************** 二维频域进行一次二次合并距离压缩 ************** %
 
 % 方位向按一个合成孔径时间补零，距离向按一个脉冲长度补零
 if (~isnan(theta_bw))
-  Ls = theta_bw * (rng_start+rng_len) / cos(theta_rc);        % 合成孔径长度
-  Ta = Ls / V / cos(theta_rc);                                % 合成孔径时间
-  Na = fix(Ta*PRF) + na;
+  Ls = theta_bw * (rng_start+rng_len);        % 合成孔径长度
+  Ta = Ls / V;                                % 合成孔径时间
+  Na = fix(1.2*Ta*PRF) + na;
 else
   Na = 2 * na;
 end
-tr = rng_start*2/c : 1/fs : (rng_start+rng_len)*2/c + 1.2*Tp;
+if (~isnan(Tp))
+  tr = rng_start*2/c : 1/fs : (rng_start+rng_len)*2/c + 1.2*Tp;
+else
+  tr = rng_start*2/c : 1/fs : (rng_start+2*rng_len)*2/c;
+end
 Nr = length(tr);
-% Nr = fix(1.2*Tp*fs) + nr;
 
 Saf = fft(data, Nr, 2);                   % 距离频域
 Sdf = fft(Saf, Na, 1);                    % 二维频域
@@ -76,7 +69,6 @@ if (options.type == "point")
 end
 
 % ************************ RCMC ********************* %
-
 Rn = c/2 * tr;            % 距离序列    
 del_R = (1-D)./D * Rn;       % RCM
 core_len = 8;

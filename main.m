@@ -39,16 +39,17 @@ Kr = B/Tp;
 f_dop = 2*V*cos(theta_rc)/lamda*theta_bw;       % 多普勒带宽
 PRF = os_a * f_dop;
 fs = os_r * B;
+fnc = 2*V*sin(theta_rc)/lamda;
 
 
 % ****************** 回波生成 **************** %
 
-%tg_pos = [260+rng_start 0; 261+rng_start 1];
-tg_pos = [260+rng_start 0];           % 设置点目标xy位置
+%tg_pos = [260 0; 261 1];
+tg_pos = [260 0];           % 设置点目标xy位置
 data = getSimulateEcho(azm_len, rng_len, rng_start, f0, fs, PRF, V, Kr, Tp, theta_rc, theta_bw, tg_pos);
 
 % ****************** 算法成像 **************** %
-img = RDA(data, Kr, f0, Tp, fs, PRF, V, rng_start, theta_rc=theta_rc, theta_bw=theta_bw);
+img = RDA(data, Kr, f0, fs, PRF, V, fnc, rng_start, theta_bw=theta_bw, Tp=Tp);
 
 % ****************** 结果 **************** %
 imagesc(abs(img));
