@@ -1,4 +1,4 @@
-function sra = getSimulateEcho(azm_len, rng_len, rng_start, f0, fs, PRF, V, Kr, Tp, theta_rc, theta_bw, tg_pos)
+function sra = getSimulateEcho(azm_len, rng_len, rng_start, Kr, f0, fs, Tp, PRF, V, theta_rc, theta_bw, tg_pos)
 c = 3e8;
 tr = rng_start*2/c : 1/fs : (rng_start+rng_len)*2/c;          % 距离向时间序列
 Nr = length(tr);

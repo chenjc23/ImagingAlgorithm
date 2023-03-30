@@ -46,7 +46,7 @@ fnc = 2*V*sin(theta_rc)/lamda;
 
 %tg_pos = [260 0; 261 1];
 tg_pos = [260 0];           % 设置点目标xy位置
-data = getSimulateEcho(azm_len, rng_len, rng_start, f0, fs, PRF, V, Kr, Tp, theta_rc, theta_bw, tg_pos);
+data = getSimulateEcho(azm_len, rng_len, rng_start, Kr, f0, fs, Tp, PRF, V, theta_rc, theta_bw, tg_pos);
 
 % ****************** 算法成像 **************** %
 img = RDA(data, Kr, f0, fs, PRF, V, fnc, rng_start, theta_bw=theta_bw, Tp=Tp);
